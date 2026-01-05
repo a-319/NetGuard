@@ -42,4 +42,10 @@
     <color name="colorReceive">#0000FF</color>
 
     <color name="colorGrayed">#AAAAAA</color>
+    <!-- New Material 3 Theme Colors (Andronet Filter Red) -->
+    <color name="brand_primary_red">#B71C1C</color>
+    <color name="brand_on_primary">#FFFFFF</color>
+    <color name="brand_primary_container">#FFCDD2</color>
+    <color name="brand_on_primary_container">#410002</color>
+
 </resources>
