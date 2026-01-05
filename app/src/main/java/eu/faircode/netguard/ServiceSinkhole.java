@@ -16,7 +16,7 @@ package eu.faircode.netguard;
     You should have received a copy of the GNU General Public License
     along with NetGuard.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2015-2025 by Marcel Bokhorst (M66B)
+    Copyright 2015-2024 by Marcel Bokhorst (M66B)
 */
 
 import android.annotation.TargetApi;
@@ -91,8 +91,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.InterfaceAddress;
-import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -102,7 +100,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -121,7 +118,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
 
     private boolean registeredUser = false;
     private boolean registeredIdleState = false;
-    private boolean registeredApState = false;
     private boolean registeredConnectivityChanged = false;
     private boolean registeredPackageChanged = false;
 
@@ -1324,24 +1320,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 listExclude.add(new IPUtil.CIDR("192.168.44.0", 24));
                 // Wi-Fi direct 192.168.49.x
                 listExclude.add(new IPUtil.CIDR("192.168.49.0", 24));
-
-                try {
-                    Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
-                    if (nis != null)
-                        while (nis.hasMoreElements()) {
-                            NetworkInterface ni = nis.nextElement();
-                            if (ni != null && !ni.isLoopback() && ni.isUp() &&
-                                    ni.getName() != null && ni.getName().startsWith("ap_br_wlan")) {
-                                List<InterfaceAddress> ias = ni.getInterfaceAddresses();
-                                if (ias != null)
-                                    for (InterfaceAddress ia : ias)
-                                        if (ia.getAddress() instanceof Inet4Address)
-                                            listExclude.add(new IPUtil.CIDR(ia.getAddress().getHostAddress(), 24));
-                            }
-                        }
-                } catch (Throwable ex) {
-                    Log.e(TAG, ex.toString());
-                }
             }
 
             if (lan) {
@@ -2230,16 +2208,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         }
     };
 
-    private BroadcastReceiver apStateReceiver = new BroadcastReceiver() {
-        @Override
-        @TargetApi(Build.VERSION_CODES.M)
-        public void onReceive(Context context, Intent intent) {
-            Log.i(TAG, "Received " + intent);
-            Util.logExtras(intent);
-            reload("AP state changed", ServiceSinkhole.this, false);
-        }
-    };
-
     private BroadcastReceiver connectivityChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -2603,11 +2571,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             ContextCompat.registerReceiver(this, idleStateReceiver, ifIdle, ContextCompat.RECEIVER_NOT_EXPORTED);
             registeredIdleState = true;
         }
-
-        IntentFilter ifAp = new IntentFilter();
-        ifAp.addAction("android.net.wifi.WIFI_AP_STATE_CHANGED");
-        ContextCompat.registerReceiver(this, apStateReceiver, ifAp, ContextCompat.RECEIVER_NOT_EXPORTED);
-        registeredApState = true;
 
         // Listen for added/removed applications
         IntentFilter ifPackage = new IntentFilter();
@@ -2975,10 +2938,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             if (registeredIdleState) {
                 unregisterReceiver(idleStateReceiver);
                 registeredIdleState = false;
-            }
-            if (registeredApState) {
-                unregisterReceiver(apStateReceiver);
-                registeredApState = false;
             }
             if (registeredPackageChanged) {
                 unregisterReceiver(packageChangedReceiver);

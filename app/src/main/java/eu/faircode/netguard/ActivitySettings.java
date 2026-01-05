@@ -16,7 +16,7 @@ package eu.faircode.netguard;
     You should have received a copy of the GNU General Public License
     along with NetGuard.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2015-2025 by Marcel Bokhorst (M66B)
+    Copyright 2015-2024 by Marcel Bokhorst (M66B)
 */
 
 import android.Manifest;
@@ -73,7 +73,6 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xmlpull.v1.XmlSerializer;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -95,7 +94,7 @@ import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 
-public class ActivitySettings extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
+public class ActivitySettings extends BaseActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = "NetGuard.Settings";
 
     private boolean running = false;
@@ -110,13 +109,26 @@ public class ActivitySettings extends AppCompatActivity implements SharedPrefere
 
     private static final Intent INTENT_VPN_SETTINGS = new Intent("android.net.vpn.SETTINGS");
 
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         Util.setTheme(this);
         super.onCreate(savedInstanceState);
-        getFragmentManager().beginTransaction().replace(android.R.id.content, new FragmentSettings()).commit();
+
+        // ***************** SECURITY CHECK *****************
+        if (!AuthManager.isAuthenticated()) {
+            Toast.makeText(this, "Access Denied", Toast.LENGTH_SHORT).show();
+            finish(); // <-- סוגר את המסך מיד
+            return;   // <-- עוצר את המשך הטעינה שלו
+        }
+        // **************************************************
+
+        getFragmentManager().beginTransaction()
+                .replace(android.R.id.content, new FragmentSettings())
+                .commit();
         getSupportActionBar().setTitle(R.string.menu_settings);
         running = true;
     }
+
 
     private PreferenceScreen getPreferenceScreen() {
         return ((PreferenceFragment) getFragmentManager().findFragmentById(android.R.id.content)).getPreferenceScreen();
@@ -1088,9 +1100,7 @@ public class ActivitySettings extends AppCompatActivity implements SharedPrefere
         }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
-    private void xmlExport(OutputStream _out) throws IOException {
-        BufferedOutputStream out = new BufferedOutputStream(_out);
-
+    private void xmlExport(OutputStream out) throws IOException {
         XmlSerializer serializer = Xml.newSerializer();
         serializer.setOutput(out, "UTF-8");
         serializer.startDocument(null, true);
@@ -1100,12 +1110,10 @@ public class ActivitySettings extends AppCompatActivity implements SharedPrefere
         serializer.startTag(null, "application");
         xmlExport(PreferenceManager.getDefaultSharedPreferences(this), serializer);
         serializer.endTag(null, "application");
-        out.flush();
 
         serializer.startTag(null, "wifi");
         xmlExport(getSharedPreferences("wifi", Context.MODE_PRIVATE), serializer);
         serializer.endTag(null, "wifi");
-        out.flush();
 
         serializer.startTag(null, "mobile");
         xmlExport(getSharedPreferences("other", Context.MODE_PRIVATE), serializer);
@@ -1146,8 +1154,6 @@ public class ActivitySettings extends AppCompatActivity implements SharedPrefere
         serializer.endTag(null, "netguard");
         serializer.endDocument();
         serializer.flush();
-
-        out.flush();
     }
 
     private void xmlExport(SharedPreferences prefs, XmlSerializer serializer) throws IOException {

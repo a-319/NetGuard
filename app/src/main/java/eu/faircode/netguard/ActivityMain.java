@@ -16,7 +16,7 @@ package eu.faircode.netguard;
     You should have received a copy of the GNU General Public License
     along with NetGuard.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2015-2025 by Marcel Bokhorst (M66B)
+    Copyright 2015-2024 by Marcel Bokhorst (M66B)
 */
 
 import android.Manifest;
@@ -78,6 +78,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
+// ADD THIS IMPORT
+import eu.faircode.netguard.AuthManager;
+
 public class ActivityMain extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = "NetGuard.Main";
 
@@ -118,6 +121,16 @@ public class ActivityMain extends AppCompatActivity implements SharedPreferences
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // ***************** SECURITY CHECK *****************
+        // This is the gatekeeper check. If not authenticated, close immediately.
+        if (!AuthManager.isAuthenticated()) {
+            Log.w(TAG, "Access to ActivityMain denied. Not authenticated.");
+            Toast.makeText(this, "Access Denied", Toast.LENGTH_SHORT).show();
+            finish();
+            return; // Stop execution of onCreate
+        }
+        // **************************************************
+
         Log.i(TAG, "Create version=" + Util.getSelfVersionName(this) + "/" + Util.getSelfVersionCode(this));
         Util.logExtras(getIntent());
 
